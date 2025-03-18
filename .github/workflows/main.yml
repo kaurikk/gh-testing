@@ -26,8 +26,15 @@ jobs:
     - name: Step 4
       run: echo "Running step 4"
 
-    - name: Manual Approval
-      uses: actions/manual-approval@v1
+  # 2) Only if build succeeds, require manual approval through an environment
+  manual_approval:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production
+    steps:
+      - name: Prepare for Deployment
+        run: echo "All checks passed. Once production environment is approved, continue."
 
-    - name: Deploy to Production
-      run: echo "Deploying to production environment"
+      - name: Deploy
+        run: echo "Deployment commands go here, executed after manual approval."
