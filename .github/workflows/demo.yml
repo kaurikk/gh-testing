@@ -3,7 +3,7 @@ name: Demo Workflow
 on:
   push:
     branches:
-      - demo
+      - staging
 
 jobs:
   build:
