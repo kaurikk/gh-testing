@@ -1,0 +1,33 @@
+name: Main Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Step 1
+      run: echo "Running step 1"
+
+    - name: Step 2
+      run: echo "Running step 2"
+
+    - name: Step 3
+      run: echo "Running step 3"
+
+    - name: Step 4
+      run: echo "Running step 4"
+
+    - name: Manual Approval
+      uses: actions/manual-approval@v1
+
+    - name: Deploy to Production
+      run: echo "Deploying to production environment"
