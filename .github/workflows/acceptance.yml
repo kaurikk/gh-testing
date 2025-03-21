@@ -3,7 +3,7 @@ name: Acceptance Testing - Setup
 on:
   pull_request:
     branches:
-      - main
+      - staging
 
 permissions:
   statuses: write
