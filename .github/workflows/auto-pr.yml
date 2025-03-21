@@ -1,0 +1,36 @@
+name: PR from Staging to Main
+
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create PR from staging to main using GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node --input-type=module -e "
+          import { execSync } from 'child_process';
+
+          try {
+            // Build the GitHub CLI command to create a pull request
+            const command = 'gh pr create --title \"Auto PR: Merge staging to main\" --body \"This PR was automatically created from a commit to the staging branch.\" --base main --head staging';
+            console.log('Executing command:', command);
+            execSync(command, { stdio: 'inherit' });
+            console.log('PR created successfully.');
+          } catch (error) {
+            console.error('Error creating PR:', error);
+            process.exit(1);
+          }
+          "
