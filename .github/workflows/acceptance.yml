@@ -9,17 +9,38 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR
         uses: actions/checkout@v3
 
-  approval:
+  pr-status:
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: acceptance_testing
     steps:
-      - name: Await Acceptance Testing
-        run: echo "Deployment will pause here until manually approved via the environment settings."
+      - name: Set PR Status to Pending using GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module -e "
+          import { execSync } from 'child_process';
 
-      - name: Acceptance Testing Passed
-        run: echo "Deployment steps proceed after the environment is approved."
+          const commitSha = process.env.COMMIT_SHA;
+          const repository = process.env.REPOSITORY;
+          if (!commitSha || !repository) {
+            console.error('Missing required environment variables.');
+            process.exit(1);
+          }
+
+          const command = \`gh api --method POST -H 'Accept: application/vnd.github.v3+json' /repos/\${repository}/statuses/\${commitSha} -f state=pending -f context='pr-acceptance-test' -f description='PR awaiting acceptance testing review.'\`;
+          console.log('Running command:', command);
+          try {
+            execSync(command, { stdio: 'inherit' });
+            console.log('PR status set to pending successfully.');
+          } catch (error) {
+            console.error('Error setting PR status:', error);
+            process.exit(1);
+          }
+          "
+      - name: Notify Pending Status
+        run: echo "PR status has been set to pending. Await external update to mark acceptance testing result."
