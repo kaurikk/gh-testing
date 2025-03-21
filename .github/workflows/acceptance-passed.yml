@@ -1,4 +1,4 @@
-name: Mark PR Acceptance Testing Passed
+name: Acceptance Testing - Passed
 
 permissions:
   statuses: write
