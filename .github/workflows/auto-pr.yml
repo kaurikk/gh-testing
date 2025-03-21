@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Check for Open PR and Create if Absent
+      - name: Check for existing PR and merge status, then create PR if needed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -26,20 +26,36 @@ jobs:
           try {
             // Check if there is already an open PR from staging to main
             const listCommand = 'gh pr list --head staging --base main --state open --json number --jq \". | length\"';
-            console.log('Checking for existing PR with command:', listCommand);
             const prCount = parseInt(execSync(listCommand, { encoding: 'utf8' }).trim(), 10);
 
-            if (prCount > 0) {
-              console.log('A PR from staging to main already exists. Skipping creation.');
-            } else {
-              // Create a new PR as none exist from staging to main
-              const createCommand = 'gh pr create --title \"Auto PR: Merge staging to main\" --body \"This PR was automatically created from a commit to the staging branch.\" --base main --head staging';
-              console.log('No open PR found. Creating PR with command:', createCommand);
-              execSync(createCommand, { stdio: 'inherit' });
-              console.log('PR created successfully.');
+            // Ensure we have the latest main branch
+            execSync('git fetch origin main');
+
+            // Check if staging is merged into main
+            let stagingMerged = false;
+            try {
+              execSync('git merge-base --is-ancestor staging origin/main');
+              stagingMerged = true;
+            } catch (e) {
+              stagingMerged = false;
             }
+
+            if (prCount > 0) {
+              console.log('An open PR from staging to main already exists. Skipping creation.');
+              process.exit(0);
+            }
+            if (stagingMerged) {
+              console.log('Staging branch is already merged into main. Skipping PR creation.');
+              process.exit(0);
+            }
+
+            // Create a new PR if neither condition applies.
+            const createCommand = \`gh pr create --title "Auto PR: Merge staging into main" --body "This PR was automatically created from a commit to the staging branch." --base main --head staging\`;
+            console.log('Executing command:', createCommand);
+            execSync(createCommand, { stdio: 'inherit' });
+            console.log('PR created successfully.');
           } catch (error) {
-            console.error('Error processing PR:', error);
+            console.error('Error creating PR:', error);
             process.exit(1);
           }
           "
