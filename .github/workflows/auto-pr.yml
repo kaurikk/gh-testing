@@ -1,0 +1,45 @@
+name: Auto Create PR from Staging to Main
+
+on:
+  push:
+    branches:
+      - staging
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check for Open PR and Create if Absent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node --input-type=module -e "
+          import { execSync } from 'child_process';
+
+          try {
+            // Check if there is already an open PR from staging to main
+            const listCommand = 'gh pr list --head staging --base main --state open --json number --jq \". | length\"';
+            console.log('Checking for existing PR with command:', listCommand);
+            const prCount = parseInt(execSync(listCommand, { encoding: 'utf8' }).trim(), 10);
+
+            if (prCount > 0) {
+              console.log('A PR from staging to main already exists. Skipping creation.');
+            } else {
+              // Create a new PR as none exist from staging to main
+              const createCommand = 'gh pr create --title \"Auto PR: Merge staging to main\" --body \"This PR was automatically created from a commit to the staging branch.\" --base main --head staging';
+              console.log('No open PR found. Creating PR with command:', createCommand);
+              execSync(createCommand, { stdio: 'inherit' });
+              console.log('PR created successfully.');
+            }
+          } catch (error) {
+            console.error('Error processing PR:', error);
+            process.exit(1);
+          }
+          "
