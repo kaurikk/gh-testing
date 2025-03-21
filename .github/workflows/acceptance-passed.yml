@@ -1,0 +1,44 @@
+name: Mark PR Acceptance Testing Passed
+
+permissions:
+  statuses: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "The commit SHA for which to mark acceptance testing as passed"
+        required: true
+
+jobs:
+  mark-accepted:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update PR Status to Success using GitHub CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.event.inputs.commit_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module -e "
+          import { execSync } from 'child_process';
+
+          const commitSha = process.env.COMMIT_SHA;
+          const repository = process.env.REPOSITORY;
+          if (!commitSha || !repository) {
+            console.error('Missing required environment variables.');
+            process.exit(1);
+          }
+
+          const command = \`gh api --method POST -H 'Accept: application/vnd.github.v3+json' /repos/\${repository}/statuses/\${commitSha} -f state=success -f context='pr-acceptance-test' -f description='Acceptance testing passed.'\`;
+          console.log('Executing command:', command);
+          try {
+            execSync(command, { stdio: 'inherit' });
+            console.log('Commit status updated to success.');
+          } catch (error) {
+            console.error('Error updating commit status:', error);
+            process.exit(1);
+          }
+          "
+      - name: Notify Status Update
+        run: echo "The PR acceptance testing status has been marked as passed."
