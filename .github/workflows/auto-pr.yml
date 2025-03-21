@@ -1,4 +1,4 @@
-name: PR from Staging to Main
+name: Auto Create PR from Staging to Main
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create PR from staging to main using GitHub CLI
+      - name: Check for Open PR and Create if Absent
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -24,13 +24,22 @@ jobs:
           import { execSync } from 'child_process';
 
           try {
-            // Build the GitHub CLI command to create a pull request
-            const command = 'gh pr create --title \"Auto PR: Merge staging to main\" --body \"This PR was automatically created from a commit to the staging branch.\" --base main --head staging';
-            console.log('Executing command:', command);
-            execSync(command, { stdio: 'inherit' });
-            console.log('PR created successfully.');
+            // Check if there is already an open PR from staging to main
+            const listCommand = 'gh pr list --head staging --base main --state open --json number --jq \". | length\"';
+            console.log('Checking for existing PR with command:', listCommand);
+            const prCount = parseInt(execSync(listCommand, { encoding: 'utf8' }).trim(), 10);
+
+            if (prCount > 0) {
+              console.log('A PR from staging to main already exists. Skipping creation.');
+            } else {
+              // Create a new PR as none exist from staging to main
+              const createCommand = 'gh pr create --title \"Auto PR: Merge staging to main\" --body \"This PR was automatically created from a commit to the staging branch.\" --base main --head staging';
+              console.log('No open PR found. Creating PR with command:', createCommand);
+              execSync(createCommand, { stdio: 'inherit' });
+              console.log('PR created successfully.');
+            }
           } catch (error) {
-            console.error('Error creating PR:', error);
+            console.error('Error processing PR:', error);
             process.exit(1);
           }
           "
